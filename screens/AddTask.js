@@ -13,18 +13,14 @@ const AddTask = ({ navigation }) => {
             return;
         }
 
-        const newTask = { title, description };
-        try {
-            const existingTasks = await AsyncStorage.getItem('tasks');
-            const tasks = existingTasks ? JSON.parse(existingTasks) : [];
-            tasks.push(newTask);
-            await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
-            setTitle('');
-            setDescription('');
-            Alert.alert('Task added!');
-        } catch (error) {
-            Alert.alert('Failed to save task');
-        }
+        const newTask = { title, description, status: 0 }; // 👈 status = 0 by default
+        const existingTasks = await AsyncStorage.getItem('tasks');
+        const tasks = existingTasks ? JSON.parse(existingTasks) : [];
+        tasks.push(newTask);
+        await AsyncStorage.setItem('tasks', JSON.stringify(tasks));
+        setTitle('');
+        setDescription('');
+        Alert.alert('Task added!');
     };
 
     return (
@@ -39,6 +35,9 @@ const AddTask = ({ navigation }) => {
             <Button title="Add Task" onPress={saveTask} />
             <View style={{ marginTop: 15 }}>
                 <Button title="Go to Task List" onPress={() => navigation.navigate('TaskList')} />
+            </View>
+            <View style={{ marginTop: 10 }}>
+                <Button title="Accepted Tasks" onPress={() => navigation.navigate('StatusChange')} />
             </View>
         </View>
     );

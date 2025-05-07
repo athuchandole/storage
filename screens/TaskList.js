@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeleteButton from '../components/DeleteButton';
+import AcceptButton from '../components/AcceptButton';
 
 const TaskList = () => {
     const [tasks, setTasks] = useState([]);
@@ -13,19 +14,61 @@ const TaskList = () => {
     const loadTasks = async () => {
         try {
             const storedTasks = await AsyncStorage.getItem('tasks');
-            setTasks(storedTasks ? JSON.parse(storedTasks) : []);
+            const allTasks = storedTasks ? JSON.parse(storedTasks) : [];
+            const pendingTasks = allTasks.filter(task => task.status === 0);
+            setTasks(pendingTasks);
         } catch (error) {
-            console.error('Failed to load tasks', error);
+            console.error('Error loading tasks:', error);
         }
     };
 
     const deleteTask = async (indexToDelete) => {
         try {
-            const updatedTasks = tasks.filter((_, index) => index !== indexToDelete);
-            setTasks(updatedTasks);
+            const storedTasks = await AsyncStorage.getItem('tasks');
+            const allTasks = storedTasks ? JSON.parse(storedTasks) : [];
+
+            const pendingTasks = allTasks.filter(task => task.status === 0);
+            const taskToDelete = pendingTasks[indexToDelete];
+
+            const updatedTasks = allTasks.filter(
+                task =>
+                    !(
+                        task.title === taskToDelete.title &&
+                        task.description === taskToDelete.description &&
+                        task.status === 0
+                    )
+            );
+
             await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
+            loadTasks();
         } catch (error) {
             Alert.alert('Failed to delete task');
+        }
+    };
+
+    const acceptTask = async (indexToAccept) => {
+        try {
+            const storedTasks = await AsyncStorage.getItem('tasks');
+            const allTasks = storedTasks ? JSON.parse(storedTasks) : [];
+
+            const pendingTasks = allTasks.filter(task => task.status === 0);
+            const taskToAccept = pendingTasks[indexToAccept];
+
+            const updatedTasks = allTasks.map(task => {
+                if (
+                    task.title === taskToAccept.title &&
+                    task.description === taskToAccept.description &&
+                    task.status === 0
+                ) {
+                    return { ...task, status: 1 };
+                }
+                return task;
+            });
+
+            await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
+            loadTasks(); // 👈 refresh list to remove accepted task
+        } catch (error) {
+            Alert.alert('Failed to accept task');
         }
     };
 
@@ -38,6 +81,7 @@ const TaskList = () => {
                             <Text style={styles.title}>{task.title}</Text>
                             <Text>{task.description}</Text>
                         </View>
+                        <AcceptButton onPress={() => acceptTask(index)} />
                         <DeleteButton onPress={() => deleteTask(index)} />
                     </View>
                 </View>
