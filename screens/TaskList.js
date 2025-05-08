@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeleteButton from '../components/DeleteButton';
-import AcceptButton from '../components/AcceptButton';
 
 const TaskList = () => {
     const [tasks, setTasks] = useState([]);
@@ -15,8 +14,7 @@ const TaskList = () => {
         try {
             const storedTasks = await AsyncStorage.getItem('tasks');
             const allTasks = storedTasks ? JSON.parse(storedTasks) : [];
-            const pendingTasks = allTasks.filter(task => task.status === 0);
-            setTasks(pendingTasks);
+            setTasks(allTasks);
         } catch (error) {
             console.error('Error loading tasks:', error);
         }
@@ -26,49 +24,22 @@ const TaskList = () => {
         try {
             const storedTasks = await AsyncStorage.getItem('tasks');
             const allTasks = storedTasks ? JSON.parse(storedTasks) : [];
-
-            const pendingTasks = allTasks.filter(task => task.status === 0);
-            const taskToDelete = pendingTasks[indexToDelete];
-
-            const updatedTasks = allTasks.filter(
-                task =>
-                    !(
-                        task.title === taskToDelete.title &&
-                        task.description === taskToDelete.description &&
-                        task.status === 0
-                    )
-            );
-
-            await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
+            allTasks.splice(indexToDelete, 1);
+            await AsyncStorage.setItem('tasks', JSON.stringify(allTasks));
             loadTasks();
         } catch (error) {
             Alert.alert('Failed to delete task');
         }
     };
 
-    const acceptTask = async (indexToAccept) => {
+    const toggleStatus = async (indexToToggle) => {
         try {
-            const storedTasks = await AsyncStorage.getItem('tasks');
-            const allTasks = storedTasks ? JSON.parse(storedTasks) : [];
-
-            const pendingTasks = allTasks.filter(task => task.status === 0);
-            const taskToAccept = pendingTasks[indexToAccept];
-
-            const updatedTasks = allTasks.map(task => {
-                if (
-                    task.title === taskToAccept.title &&
-                    task.description === taskToAccept.description &&
-                    task.status === 0
-                ) {
-                    return { ...task, status: 1 };
-                }
-                return task;
-            });
-
+            const updatedTasks = [...tasks];
+            updatedTasks[indexToToggle].status = updatedTasks[indexToToggle].status === 0 ? 1 : 0;
             await AsyncStorage.setItem('tasks', JSON.stringify(updatedTasks));
-            loadTasks(); // 👈 refresh list to remove accepted task
+            loadTasks();
         } catch (error) {
-            Alert.alert('Failed to accept task');
+            Alert.alert('Failed to update status');
         }
     };
 
@@ -81,7 +52,11 @@ const TaskList = () => {
                             <Text style={styles.title}>{task.title}</Text>
                             <Text>{task.description}</Text>
                         </View>
-                        <AcceptButton onPress={() => acceptTask(index)} />
+                        <TouchableOpacity onPress={() => toggleStatus(index)}>
+                            <Text style={[styles.statusBtn, task.status === 0 ? styles.pending : styles.confirmed]}>
+                                {task.status === 0 ? 'Pending' : 'Confirmed'}
+                            </Text>
+                        </TouchableOpacity>
                         <DeleteButton onPress={() => deleteTask(index)} />
                     </View>
                 </View>
@@ -101,6 +76,21 @@ const styles = StyleSheet.create({
     },
     title: { fontWeight: 'bold', fontSize: 16, marginBottom: 5 },
     row: { flexDirection: 'row', alignItems: 'center' },
+    statusBtn: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 4,
+        fontWeight: 'bold',
+        marginRight: 10,
+    },
+    pending: {
+        backgroundColor: '#f0ad4e',
+        color: 'white',
+    },
+    confirmed: {
+        backgroundColor: '#5cb85c',
+        color: 'white',
+    },
 });
 
 export default TaskList;
